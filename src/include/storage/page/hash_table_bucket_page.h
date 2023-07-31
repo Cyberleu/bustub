@@ -14,6 +14,7 @@
 
 #include <utility>
 #include <vector>
+#include<iostream>
 
 #include "common/config.h"
 #include "storage/index/int_comparator.h"
@@ -137,13 +138,23 @@ class HashTableBucketPage {
    */
   void PrintBucket();
 
+  void PrintBucketBinary(uint32_t group){
+    char data_char = readable_[group];
+    uint8_t data_int = static_cast<uint8_t>(data_char);
+    for(int offset = 0;offset<8;offset++){
+      uint8_t mask = 1<<(7-offset);
+      std::cout<<((mask & data_int)>0);
+    }
+    std::cout<<std::endl;
+  }
+
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // Flexible array member for page data.
-  MappingType array_[1];
+  MappingType array_[BUCKET_ARRAY_SIZE];
 };
 
 }  // namespace bustub

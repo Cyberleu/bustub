@@ -69,6 +69,18 @@ class BPlusTree {
                      const KeyComparator &comparator, int leaf_max_size = LEAF_PAGE_SIZE,
                      int internal_max_size = INTERNAL_PAGE_SIZE);
 
+       
+  auto key_cmp(const MappingType & left,const MappingType & right) -> bool;
+
+  auto BinarySearch(const KeyType &key,const InternalPage * internal_page) -> int;
+
+  auto BinarySearch(const KeyType &key,const LeafPage * leaf_page) -> int;
+
+  void SplitLeaf(LeafPage * leaf_page,int insert_idx,MappingType insert_value,page_id_t &left_page_id,page_id_t &right_page_id_t);
+
+  void SplitInternal(InternalPage * internal_page,KeyType key,page_id_t &new_page_id);
+
+  void InsertIntoInternal(KeyType key,page_id_t internal_page_id,page_id_t left_page_id,page_id_t right_page_id);
   // Returns true if this B+ tree has no keys and values.
   auto IsEmpty() const -> bool;
 
@@ -116,17 +128,6 @@ class BPlusTree {
   // read data from file and remove one by one
   void RemoveFromFile(const std::string &file_name, Transaction *txn = nullptr);
 
-  /**
-   * @brief Read batch operations from input file, below is a sample file format
-   * insert some keys and delete 8, 9 from the tree with one step.
-   * { i1 i2 i3 i4 i5 i6 i7 i8 i9 i10 i30 d8 d9 } //  batch.txt
-   * B+ Tree(4 max leaf, 4 max internal) after processing:
-   *                            (5)
-   *                 (3)                (7)
-   *            (1,2)    (3,4)    (5,6)    (7,10,30) //  The output tree example
-   */
-  void BatchOpsFromFile(const std::string &file_name, Transaction *txn = nullptr);
-
  private:
   /* Debug Routines for FREE!! */
   void ToGraph(page_id_t page_id, const BPlusTreePage *page, std::ofstream &out);
@@ -152,7 +153,7 @@ class BPlusTree {
 };
 
 /**
- * @brief for test only. PrintableBPlusTree is a printable B+ tree.
+ * @brief for test only. PrintableBPlusTree is a printalbe B+ tree.
  * We first convert B+ tree into a printable B+ tree and the print it.
  */
 struct PrintableBPlusTree {

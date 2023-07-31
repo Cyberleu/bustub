@@ -35,7 +35,7 @@ class BufferPoolManager {
    * @brief Creates a new BufferPoolManager.
    * @param pool_size the size of the buffer pool
    * @param disk_manager the disk manager
-   * @param replacer_k the LookBack constant k for the LRU-K replacer
+   * @param replacer_k the lookback constant k for the LRU-K replacer
    * @param log_manager the log manager (for testing only: nullptr = disable logging). Please ignore this for P1.
    */
   BufferPoolManager(size_t pool_size, DiskManager *disk_manager, size_t replacer_k = LRUK_REPLACER_K,
@@ -203,7 +203,7 @@ class BufferPoolManager {
    * @brief Deallocate a page on disk. Caller should acquire the latch before calling this function.
    * @param page_id id of the page to deallocate
    */
-  void DeallocatePage(__attribute__((unused)) page_id_t page_id) {
+  void DeallocatePage(page_id_t page_id) {
     // This is a no-nop right now without a more complex data structure to track deallocated pages
   }
 

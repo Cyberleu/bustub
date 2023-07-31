@@ -23,7 +23,7 @@ namespace bustub {
 /**
  * Store n indexed keys and n+1 child pointers (page_id) within internal page.
  * Pointer PAGE_ID(i) points to a subtree in which all keys K satisfy:
- * K(i) <= K < K(i+1).
+ * K(i) < K <= K(i+1).
  * NOTE: since the number of keys does not equal to number of child pointers,
  * the first key always remains invalid. That is to say, any search/lookup
  * should ignore the first key.
@@ -101,6 +101,6 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
  private:
   // Flexible array member for page data.
-  MappingType array_[0];
+  MappingType array_[INTERNAL_PAGE_SIZE];
 };
 }  // namespace bustub

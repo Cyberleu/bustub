@@ -15,8 +15,10 @@
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
+#include <queue>
 #include <unordered_map>
 #include <vector>
+#include<iostream>
 
 #include "common/config.h"
 #include "common/macros.h"
@@ -26,14 +28,17 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Get, Scan };
 
 class LRUKNode {
- private:
+ public:
+  LRUKNode(size_t k, frame_id_t fid) : k_(k), fid_(fid) {}
+  LRUKNode(){}
+
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
+  size_t pinned_count{0};
+  size_t k_;
+  frame_id_t fid_;
+  bool is_evictable_{false};
 };
 
 /**
@@ -44,7 +49,7 @@ class LRUKNode {
  * current timestamp and the timestamp of kth previous access.
  *
  * A frame with less than k historical references is given
- * +inf as its backward k-distance. When multiple frames have +inf backward k-distance,
+ * +inf as its backward k-distance. When multipe frames have +inf backward k-distance,
  * classical LRU algorithm is used to choose victim.
  */
 class LRUKReplacer {
@@ -147,15 +152,34 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
+  auto GetCurSize() -> size_t;
+
+  void AdjustList(frame_id_t frame_id);
+
+  void print(){
+    std::cout<<"first_q"<<std::endl;
+    for(auto iter = first_q.begin();iter != first_q.end();iter++){
+      std::cout<<*iter;
+    }
+    std::cout<<std::endl;
+    std::cout<<"second_q"<<std::endl;
+    for(auto iter = second_q.begin();iter != second_q.end();iter++){
+      std::cout<<*iter;
+    }
+  }
+
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  [[maybe_unused]] size_t current_timestamp_ { 0 };
+  size_t evictable_size{0};
+  size_t curr_size_{0};      //��ҳ����
+  size_t replacer_size_;  //�ܴ�С
+  size_t k_;
+  std::mutex latch_;
+  std::list<frame_id_t> first_q;  //�������зֱ�Ϊ���ʴ���<k��>=k
+  std::list<frame_id_t> second_q;
 };
 
 }  // namespace bustub

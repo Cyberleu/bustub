@@ -22,11 +22,89 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, page_id_t header_page_id, BufferPool
   root_page->root_page_id_ = INVALID_PAGE_ID;
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::key_cmp(const MappingType & left,const MappingType & right) -> bool{
+  return comparator_(left.first,right.first) == -1;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key,const InternalPage * internal_page) -> int{
+  auto p = std::upper_bound( internal_page->array_+1,internal_page->array_+internal_page->GetSize(),key);
+  int offset = p-(internal_page->array_+1);
+  return offset;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key,const LeafPage * leaf_page) -> int{
+  auto p = std::lower_bound(leaf_page->array_,leaf_page->array_+leaf_page->GetSize(),key);
+  int offset = p-leaf_page->array_;
+  return offset;
+}
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::SplitLeaf(LeafPage * leaf_page,int insert_idx,MappingType insert_value,page_id_t &left_page_id,page_id_t &right_page_id){
+  int split_point = (leaf_page->GetSize()+1)/2;
+  WritePageGuard left_guard = bpm_->FetchPageWrite(&left_page_id);
+  LeafPage * left_page = left_guard.AsMut<LeafPage>();
+  left_page->Init(leaf_max_size_);
+  WritePageGuard right_guard = bpm_->FetchPageWrite(&right_page_id);
+  LeafPage * right_page = right_guard.AsMut<LeafPage>();
+  right_page->Init(leaf_max_size_);
+  bool flag = true;
+  int idx = 0;         //Point to the index of the array
+  int count = 0;       
+  while(true){          //Divide the leaf page into two pages
+    LeafPage * insert_page = nullptr;
+    int next_idx = -1;
+    if(count<split_point) {
+      insert_page = left_page;
+      next_idx = count;
+    }
+    else {
+      insert_page = right_page;
+      next_idx = count-split_point;
+    }
+    if(flag && idx == insert_idx) {
+      insert_page->SetAt(next_idx,insert_value);
+      flag = false;
+    }
+    else{
+      insert_page->SetAt(next_idx,leaf_page->array_[idx]);
+      idx++;
+    }
+    count++;
+    if(count == leaf_page->GetSize()+1) break;
+  }
+  left_page->SetSize(split_point);
+  right_page->SetSize(count-split_point);
+  left_page->SetNextPageId(right_guard.PageId());
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::InsertIntoInternal(KeyType key,page_id_t internal_page_id,page_id_t left_page_id,page_id_t right_page_id){
+  WritePageGuard write_guard = bpm_->FetchPageWrite(internal_page_id);
+  InternalPage * internal_page = write_guard.AsMut<InternalPage>();
+  if(internal_page->GetSize()<internal_page->GetMaxSize()){     //Case 1:the internal page is not full
+    int insert_idx = BinarySearch(key,internal_page);
+    for(int i = internal_page->GetSize()-1;i>=insert_idx;i--){  //Remove the value before insertion
+      internal_page->array_[i] = internal_page->array_[i-1];
+    }
+    internal_page->array_[insert_idx].first = key;              //Update the page_id of splitted pages
+    internal_page->array_[insert_idx-1].second = left_page_id;
+    internal_page->array_[insert_idx].second = right_page_id;
+  }
+  else{
+
+  }
+}
 /*
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool { 
+  page_id_t root_page_id = GetRootPageId();
+  if(root_page_id == INVALID_PAGE_ID) return true;
+  return false;
+}
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -40,6 +118,32 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   // Declaration of context instance.
   Context ctx;
   (void)ctx;
+  page_id_t root_page_id = GetRootPageId();
+  page_id_t pos_page_id = root_page_id;
+  page_id_t leaf_page_id = INVALID_PAGE_ID;
+  while(1){    //Find the leafnode first
+    ReadPageGuard read_guard = bpm_->FetchPageRead(pos_page_id);
+    auto page = read_guard.As<BPlusTreePage>();
+    if(page->IsLeafPage()) {
+      leaf_page_id = read_guard.PageId();
+      LeafPage * leaf_page = read_guard<BPlusTreeLeafPage>();
+      int idx = BinarySearch(key,leaf_page);
+      if(idx == leaf_page->GetSize() || key != leaf_page->KeyAt(idx)) return false;
+      else{
+        for(int i = idx;i<leaf_page->GetSize();i++){
+          if(comparator_(leaf_page->KeyAt(i),key) == 0) result->push_back(leaf_page->array_[i].second);
+          else break;
+        }
+        return true;
+      }
+      break;
+    }
+    else{
+      InternalPage * internal_page = read_guard.As<BPlusTreeInternalPage>();
+      int idx = BinarySearch(key,internal_page);
+      pos_page_id = internal_page->ValueAt(idx-1);
+    }
+  }
   return false;
 }
 
@@ -58,7 +162,87 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
   // Declaration of context instance.
   Context ctx;
   (void)ctx;
-  return false;
+  page_id_t root_page_id = GetRootPageId();
+  if(root_page_id == INVALID_PAGE_ID){
+    BasicPageGuard basic_guard = bpm_->NewPageGuarded(&root_page_id); 
+    if(basic_guard.page_ == nullptr) return false;    //Fetching a newpage as the rootpage failed
+    auto leaf_page = basic_guard.AsMut<BPlusTreeLeafPage>();
+    leaf_page->Init(leaf_max_size_);
+    WritePageGuard write_guard = bpm_->FetchPageWrite(header_page_id_);
+    auto header_page = write_guard.AsMut<BPlusTreeHeaderPage>();
+    header_page->root_page_id_ = root_page_id;
+  }
+  page_id_t pos_page_id = root_page_id;
+  page_id_t leaf_page_id = INVALID_PAGE_ID;
+  while(1){    //Find the leafnode first
+    ReadPageGuard read_guard = bpm_->FetchPageRead(pos_page_id);
+    auto page = read_guard.As<BPlusTreePage>();
+    if(page->IsLeafPage()) {
+      leaf_page_id = read_guard.PageId();
+      break;
+    }
+    else{
+      InternalPage * internal_page = read_guard.As<BPlusTreeInternalPage>();
+      int idx = BinarySearch(key,internal_page);
+      pos_page_id = internal_page->ValueAt(idx);
+    }
+  }
+  WritePageGuard leaf_guard = bpm_->FetchPageWrite(root_page_id);
+  LeafPage* leaf_page = leaf_guard.AsMut<LeafPage>();
+  int insert_idx = BinarySearch(key,leaf_page);
+  if(insert_idx < leaf_page->GetSize() && leaf_page->KeyAt(insert_idx) == key) return false;   //Already have the same key 
+  if(leaf_page->GetSize() < leaf_page->GetMaxSize()){   //case 1:no need to split the leaf page
+    for(int i = leaf_page->GetSize()-1;i>=insert_idx;i--){
+      leaf_page->SetAt(i+1,array_[i]);
+    }
+    leaf_page->SetAt(insert_idx,MappingType(key,value));
+    leaf_page->IncreaseSize();
+  }
+  else{                                                    //case 2 :split the leaf page
+    page_id_t left_page_id = INVALID_PAGE_ID;
+    page_id_t right_page_id = INVALID_PAGE_ID;
+    WritePageGuard left_guard = bpm_->FetchPageWrite(&left_page_id);
+    LeafPage * left_page = left_guard.AsMut<LeafPage>();
+    left_page->Init(leaf_max_size_);
+    WritePageGuard right_guard = bpm_->FetchPageWrite(&right_page_id);
+    LeafPage * right_page = right_guard.AsMut<LeafPage>();
+    right_page->Init(leaf_max_size_);
+    int split_point = (leaf_page->GetSize()+1)/2;
+    bool flag = true;
+    int idx = 0;         //Point to the index of the array
+    int count = 0;       
+    while(true){          //Divide the leaf page into two pages
+      LeafPage * insert_page = nullptr;
+      int next_idx = -1;
+      if(count<split_point) {
+        insert_page = left_page;
+        next_idx = count;
+      }
+      else {
+        insert_page = right_page;
+        next_idx = count-split_point;
+      }
+      if(flag && idx == insert_idx) {
+        insert_page->SetAt(next_idx,MappingType(key,value));
+        flag = false;
+      }
+      else{
+        insert_page->SetAt(next_idx,leaf_page->array_[idx]);
+        idx++;
+      }
+      count++;
+      if(count == leaf_page->GetSize()+1) break;
+    }
+    left_page->SetSize(split_point);
+    right_page->SetSize(count-split_point);
+    right_page->SetNextPageId(leaf_page->GetNextPageId());
+    left_page->SetNextPageId(right_guard.PageId());
+    leaf_guard.Drop();
+    bpm_->DeletePage(leaf_page_id);
+    KeyType insert_key = right_page->KeyAt(0);
+    
+  }
+  return true;
 }
 
 /*****************************************************************************
@@ -109,7 +293,11 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); 
  * @return Page id of the root of this tree
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t { return 0; }
+auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t {
+  ReadPageGuard read_guard = bpm_->FetchPageRead(HEADER_PAGE_ID);
+  auto root_page = read_guard.As<BPlusTreeHeaderPage>();
+  return root_page->root_page_id_;
+}
 
 /*****************************************************************************
  * UTILITIES AND DEBUG
@@ -123,7 +311,9 @@ INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::InsertFromFile(const std::string &file_name, Transaction *txn) {
   int64_t key;
   std::ifstream input(file_name);
-  while (input >> key) {
+  while (input) {
+    input >> key;
+
     KeyType index_key;
     index_key.SetFromInteger(key);
     RID rid(key);
@@ -138,37 +328,11 @@ INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::RemoveFromFile(const std::string &file_name, Transaction *txn) {
   int64_t key;
   std::ifstream input(file_name);
-  while (input >> key) {
+  while (input) {
+    input >> key;
     KeyType index_key;
     index_key.SetFromInteger(key);
     Remove(index_key, txn);
-  }
-}
-
-/*
- * This method is used for test only
- * Read data from file and insert/remove one by one
- */
-INDEX_TEMPLATE_ARGUMENTS
-void BPLUSTREE_TYPE::BatchOpsFromFile(const std::string &file_name, Transaction *txn) {
-  int64_t key;
-  char instruction;
-  std::ifstream input(file_name);
-  while (input) {
-    input >> instruction >> key;
-    RID rid(key);
-    KeyType index_key;
-    index_key.SetFromInteger(key);
-    switch (instruction) {
-      case 'i':
-        Insert(index_key, rid, txn);
-        break;
-      case 'd':
-        Remove(index_key, txn);
-        break;
-      default:
-        break;
-    }
   }
 }
 

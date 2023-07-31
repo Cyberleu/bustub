@@ -33,9 +33,9 @@ enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
  * It actually serves as a header part for each B+ tree page and
  * contains information shared by both leaf page and internal page.
  *
- * Header format (size in byte, 12 bytes in total):
+ * Header format (size in byte, 16 bytes in total):
  * ----------------------------------------------------------------------------
- * | PageType (4) | CurrentSize (4) | MaxSize (4) |
+ * | PageType (4) | CurrentSize (4) | MaxSize (4) | ParentPageId (4) |
  * ----------------------------------------------------------------------------
  */
 class BPlusTreePage {
@@ -56,11 +56,15 @@ class BPlusTreePage {
   void SetMaxSize(int max_size);
   auto GetMinSize() const -> int;
 
+  auto GetParentPageId() const -> page_id_t;
+  void SetParentPageId(page_id_t parent_page_id);
+
  private:
   // member variable, attributes that both internal and leaf page share
-  IndexPageType page_type_ __attribute__((__unused__));
-  int size_ __attribute__((__unused__));
-  int max_size_ __attribute__((__unused__));
+  IndexPageType page_type_;
+  int size_;
+  int max_size_;
+  page_id_t parent_page_id_;
 };
 
 }  // namespace bustub
