@@ -124,6 +124,9 @@ class Trie {
   // Remove the key from the trie. If the key does not exist, return the original trie.
   // Otherwise, returns the new trie.
   auto Remove(std::string_view key) const -> Trie;
+
+  // Get the root of the trie, should only be used in test cases.
+  auto GetRoot() const -> std::shared_ptr<const TrieNode> { return root_; }
 };
 
 }  // namespace bustub
