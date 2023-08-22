@@ -172,6 +172,8 @@ class BufferPoolManager {
    */
   auto DeletePage(page_id_t page_id) -> bool;
 
+  // void Print();
+
  private:
   /** Number of pages in the buffer pool. */
   const size_t pool_size_;

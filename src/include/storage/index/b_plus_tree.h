@@ -65,22 +65,21 @@ class BPlusTree {
   using LeafPage = BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>;
 
  public:
-  explicit BPlusTree(std::string name, page_id_t header_page_id, BufferPoolManager *buffer_pool_manager,
-                     const KeyComparator &comparator, int leaf_max_size = LEAF_PAGE_SIZE,
-                     int internal_max_size = INTERNAL_PAGE_SIZE);
+  explicit BPlusTree(
+      std::string name, page_id_t header_page_id, BufferPoolManager *buffer_pool_manager,
+      const KeyComparator &comparator, int leaf_max_size = LEAF_PAGE_SIZE - 1,
+      int internal_max_size = INTERNAL_PAGE_SIZE -
+                              1);  // For convinience of writing code,leave one slot for temporary storage
 
-       
-  auto key_cmp(const MappingType & left,const MappingType & right) -> bool;
+  auto BinarySearch(const KeyType &key, const InternalPage *internal_page) -> int;
 
-  auto BinarySearch(const KeyType &key,const InternalPage * internal_page) -> int;
+  auto BinarySearch(const KeyType &key, const LeafPage *leaf_page) -> int;
 
-  auto BinarySearch(const KeyType &key,const LeafPage * leaf_page) -> int;
+  void SplitLeaf(page_id_t leaf_page_id, MappingType insert_value, page_id_t &right_page_id_t, KeyType &new_key);
 
-  void SplitLeaf(LeafPage * leaf_page,int insert_idx,MappingType insert_value,page_id_t &left_page_id,page_id_t &right_page_id_t);
+  void SplitInternal(page_id_t internal_page_id, page_id_t &right_page_id, KeyType &new_key);
 
-  void SplitInternal(InternalPage * internal_page,KeyType key,page_id_t &new_page_id);
-
-  void InsertIntoInternal(KeyType key,page_id_t internal_page_id,page_id_t left_page_id,page_id_t right_page_id);
+  void InsertIntoInternal(KeyType key, page_id_t internal_page_id, page_id_t left_page_id, page_id_t right_page_id);
   // Returns true if this B+ tree has no keys and values.
   auto IsEmpty() const -> bool;
 
@@ -94,7 +93,7 @@ class BPlusTree {
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *txn = nullptr) -> bool;
 
   // Return the page id of the root node
-  auto GetRootPageId() -> page_id_t;
+  auto GetRootPageId() const -> page_id_t;
 
   // Index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
@@ -127,6 +126,8 @@ class BPlusTree {
 
   // read data from file and remove one by one
   void RemoveFromFile(const std::string &file_name, Transaction *txn = nullptr);
+
+  void BatchOpsFromFile(const std::string &file_name, Transaction *txn = nullptr);
 
  private:
   /* Debug Routines for FREE!! */

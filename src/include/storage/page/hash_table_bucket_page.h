@@ -12,9 +12,9 @@
 
 #pragma once
 
+#include <iostream>
 #include <utility>
 #include <vector>
-#include<iostream>
 
 #include "common/config.h"
 #include "storage/index/int_comparator.h"
@@ -138,14 +138,14 @@ class HashTableBucketPage {
    */
   void PrintBucket();
 
-  void PrintBucketBinary(uint32_t group){
+  void PrintBucketBinary(uint32_t group) {
     char data_char = readable_[group];
     uint8_t data_int = static_cast<uint8_t>(data_char);
-    for(int offset = 0;offset<8;offset++){
-      uint8_t mask = 1<<(7-offset);
-      std::cout<<((mask & data_int)>0);
+    for (int offset = 0; offset < 8; offset++) {
+      uint8_t mask = 1 << (7 - offset);
+      std::cout << ((mask & data_int) > 0);
     }
-    std::cout<<std::endl;
+    std::cout << '\n';
   }
 
  private:

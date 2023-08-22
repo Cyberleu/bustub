@@ -12,13 +12,13 @@
 
 #pragma once
 
+#include <iostream>
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
 #include <queue>
 #include <unordered_map>
 #include <vector>
-#include<iostream>
 
 #include "common/config.h"
 #include "common/macros.h"
@@ -30,15 +30,17 @@ enum class AccessType { Unknown = 0, Get, Scan };
 class LRUKNode {
  public:
   LRUKNode(size_t k, frame_id_t fid) : k_(k), fid_(fid) {}
-  LRUKNode(){}
+  LRUKNode() = default;
 
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
-
-  size_t pinned_count{0};
+  std::list<size_t> history_;
+  size_t pinned_count_{0};
   size_t k_;
   frame_id_t fid_;
   bool is_evictable_{false};
+  LRUKNode *next_{nullptr};
+  LRUKNode *pre_{nullptr};
 };
 
 /**
@@ -70,7 +72,7 @@ class LRUKReplacer {
    *
    * @brief Destroys the LRUReplacer.
    */
-  ~LRUKReplacer() = default;
+  ~LRUKReplacer();
 
   /**
    * TODO(P1): Add implementation
@@ -125,7 +127,7 @@ class LRUKReplacer {
   void SetEvictable(frame_id_t frame_id, bool set_evictable);
 
   /**
-   * TODO(P1): Add implementation
+   * TODO(P1): Add implementationLRUKNode* node = node_store_.find()
    *
    * @brief Remove an evictable frame from replacer, along with its access history.
    * This function should also decrement replacer's size if removal is successful.
@@ -152,34 +154,39 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
-  auto GetCurSize() -> size_t;
+  // void Print();
 
-  void AdjustList(frame_id_t frame_id);
+  // void AdjustList(frame_id_t frame_id);
 
-  void print(){
-    std::cout<<"first_q"<<std::endl;
-    for(auto iter = first_q.begin();iter != first_q.end();iter++){
-      std::cout<<*iter;
-    }
-    std::cout<<std::endl;
-    std::cout<<"second_q"<<std::endl;
-    for(auto iter = second_q.begin();iter != second_q.end();iter++){
-      std::cout<<*iter;
-    }
-  }
+  void RemoveNode(const LRUKNode *node);
+
+  void InsertNode(LRUKNode *left, LRUKNode *right);
+
+  // void Print() {
+  //   std::cout << "first_q" << '\n';
+  //   for (int &iter : first_q_) {
+  //     std::cout << iter;
+  //   }
+  //   std::cout << '\n';
+  //   std::cout << "second_q" << '\n';
+  //   for (int &iter : second_q_) {
+  //     std::cout << iter;
+  //   }
+  // }
 
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_ { 0 };
-  size_t evictable_size{0};
-  size_t curr_size_{0};      //��ҳ����
-  size_t replacer_size_;  //�ܴ�С
+  std::unordered_map<frame_id_t, LRUKNode *> node_store_;
+  size_t current_timestamp_{0};
+  size_t evictable_size_{0};  // number of evictable frames of the replacer.
+  size_t replacer_size_;      // max size of replacer.
   size_t k_;
   std::mutex latch_;
-  std::list<frame_id_t> first_q;  //�������зֱ�Ϊ���ʴ���<k��>=k
-  std::list<frame_id_t> second_q;
+  LRUKNode *head1_;  // 1 is the history_list,which stores nodes with pinned_count < k.
+  LRUKNode *head2_;  // 2 is the buffer_list,which stores nodes with pinned_count >= k.
+  LRUKNode *tail1_;
+  LRUKNode *tail2_;
 };
 
 }  // namespace bustub

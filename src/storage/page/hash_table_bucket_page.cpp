@@ -23,26 +23,25 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) -> bool {
   bool flag = false;
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
-    if (IsReadable(i) && cmp(key, this->array_[i].first) == 0){
-	  result->push_back(this->array_[i].second);
+    if (IsReadable(i) && cmp(key, this->array_[i].first) == 0) {
+      result->push_back(this->array_[i].second);
       flag = true;
-	}
+    }
   }
-	return flag;
+  return flag;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator cmp) -> bool {
   uint32_t idx = -1;
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
-    if (IsReadable(i) && !cmp(key, KeyAt(i)) && value == ValueAt(i)) {  //�������ͬ��key-value�ԣ���ֱ������
+    if (IsReadable(i) && !cmp(key, KeyAt(i)) && value == ValueAt(i)) {
       idx = -1;
-      break; 
-	}
-    else if (!IsReadable(i)) { 
-	  idx = i;
-    break;
-	}
+      break;
+    } else if (!IsReadable(i)) {
+      idx = i;
+      break;
+    }
   }
   if (static_cast<int>(idx) != -1) {
     this->array_[idx] = MappingType(key, value);
@@ -50,7 +49,7 @@ auto HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator 
     SetReadable(idx);
     return true;
   }
-	return false;
+  return false;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -59,7 +58,7 @@ auto HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator 
     if (IsReadable(i) && !cmp(key, this->array_[i].first) && value == this->array_[i].second) {
       RemoveAt(i);
       return true;
-	}
+    }
   }
   return false;
 }
@@ -79,7 +78,7 @@ void HASH_TABLE_BUCKET_TYPE::RemoveAt(uint32_t bucket_idx) {
   uint32_t group = bucket_idx / (8 * sizeof(char));
   uint32_t offset = bucket_idx % (8 * sizeof(char));
   uint8_t mask = 1 << (7 - offset);
-  uint8_t pos = mask ^ static_cast<uint8_t>(this->readable_[group]);//�����벢����������1��0
+  uint8_t pos = mask ^ static_cast<uint8_t>(this->readable_[group]);
   this->readable_[group] = static_cast<char>(pos);
 }
 
@@ -122,19 +121,20 @@ auto HASH_TABLE_BUCKET_TYPE::IsFull() -> bool {
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
     if (!IsReadable(i)) return false;
   }
-	return true;
+  return true;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::NumReadable() -> uint32_t {
   uint32_t count = 0;
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
-    if (!IsOccupied(i)) break;
-    else {
-      if (IsReadable(i)) count++;    
-	}
+    if (!IsOccupied(i)) {
+      break;
+    } else {
+      if (IsReadable(i)) count++;
+    }
   }
-	return count;
+  return count;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
