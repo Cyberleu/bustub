@@ -13,6 +13,7 @@
 #include <chrono>  // NOLINT
 #include <cstdio>
 #include <functional>
+#include <random>
 #include <thread>  // NOLINT
 
 #include "buffer/buffer_pool_manager.h"
@@ -133,14 +134,16 @@ TEST(BPlusTreeConcurrentTest, DISABLED_InsertTest1) {
   page_id_t page_id;
   auto header_page = bpm->NewPage(&page_id);
   // create b+ tree
-  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator);
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator, 4, 5);
   // keys to Insert
   std::vector<int64_t> keys;
-  int64_t scale_factor = 100;
+  int64_t scale_factor = 1000;
   for (int64_t key = 1; key < scale_factor; key++) {
     keys.push_back(key);
   }
-  LaunchParallelTest(2, InsertHelper, &tree, keys);
+  auto rng = std::default_random_engine{};
+  std::shuffle(keys.begin(), keys.end(), rng);
+  LaunchParallelTest(5, InsertHelper, &tree, keys);
 
   std::vector<RID> rids;
   GenericKey<8> index_key;
@@ -230,13 +233,19 @@ TEST(BPlusTreeConcurrentTest, DISABLED_DeleteTest1) {
   page_id_t page_id;
   auto header_page = bpm->NewPage(&page_id);
   // create b+ tree
-  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator);
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator, 4, 5);
   // sequential insert
-  std::vector<int64_t> keys = {1, 2, 3, 4, 5};
+  std::vector<int64_t> keys;
+  int64_t scale_factor = 3000;
+  for (int64_t key = 1; key < scale_factor; key++) {
+    keys.push_back(key);
+  }
+  auto rng = std::default_random_engine{};
+  std::shuffle(keys.begin(), keys.end(), rng);
   InsertHelper(&tree, keys);
 
   std::vector<int64_t> remove_keys = {1, 5, 3, 4};
-  LaunchParallelTest(2, DeleteHelper, &tree, remove_keys);
+  LaunchParallelTest(10, DeleteHelper, &tree, keys);
 
   int64_t start_key = 2;
   int64_t current_key = start_key;
@@ -336,7 +345,7 @@ TEST(BPlusTreeConcurrentTest, DISABLED_MixTest1) {
   delete bpm;
 }
 
-TEST(BPlusTreeConcurrentTest, DISABLED_MixTest2) {
+TEST(BPlusTreeConcurrentTest, MixTest2) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -350,13 +359,13 @@ TEST(BPlusTreeConcurrentTest, DISABLED_MixTest2) {
   (void)header_page;
 
   // create b+ tree
-  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", page_id, bpm, comparator);
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", page_id, bpm, comparator, 4, 5);
 
   // Add perserved_keys
   std::vector<int64_t> perserved_keys;
   std::vector<int64_t> dynamic_keys;
-  int64_t total_keys = 50;
-  int64_t sieve = 5;
+  int64_t total_keys = 2000;
+  int64_t sieve = 100;
   for (int64_t i = 1; i <= total_keys; i++) {
     if (i % sieve == 0) {
       perserved_keys.push_back(i);
@@ -364,6 +373,9 @@ TEST(BPlusTreeConcurrentTest, DISABLED_MixTest2) {
       dynamic_keys.push_back(i);
     }
   }
+  auto rng = std::default_random_engine{};
+  std::shuffle(perserved_keys.begin(), perserved_keys.end(), rng);
+  std::shuffle(dynamic_keys.begin(), dynamic_keys.end(), rng);
   InsertHelper(&tree, perserved_keys, 1);
   // Check there are 1000 keys in there
   size_t size;

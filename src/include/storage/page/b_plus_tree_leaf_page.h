@@ -19,7 +19,7 @@
 namespace bustub {
 
 #define B_PLUS_TREE_LEAF_PAGE_TYPE BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>
-#define LEAF_PAGE_HEADER_SIZE 16
+#define LEAF_PAGE_HEADER_SIZE 24
 #define LEAF_PAGE_SIZE ((BUSTUB_PAGE_SIZE - LEAF_PAGE_HEADER_SIZE) / sizeof(MappingType))
 
 /**
@@ -37,7 +37,7 @@ namespace bustub {
  * | PageType (4) | CurrentSize (4) | MaxSize (4) |
  *  ---------------------------------------------------------------------
  *  -----------------------------------------------
- * |  NextPageId (4)
+ * |  NextPageId (4)  |  PrePageId (4)
  *  -----------------------------------------------
  */
 INDEX_TEMPLATE_ARGUMENTS
@@ -52,7 +52,7 @@ class BPlusTreeLeafPage : public BPlusTreePage {
    * method to set default values
    * @param max_size Max size of the leaf node
    */
-  void Init(int max_size = LEAF_PAGE_SIZE);
+  void Init(int max_size = LEAF_PAGE_SIZE - 1);
 
   // helper methods
   auto GetNextPageId() const -> page_id_t;

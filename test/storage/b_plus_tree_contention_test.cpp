@@ -37,8 +37,8 @@ bool BPlusTreeLockBenchmarkCall(size_t num_threads, int leaf_node_size, bool wit
 
   std::vector<std::thread> threads;
 
-  const int keys_per_thread = 20000 / num_threads;
-  const int keys_stride = 100000;
+  const int keys_per_thread = 1000 / num_threads;
+  const int keys_stride = 1000;
   std::mutex mtx;
 
   for (size_t i = 0; i < num_threads; i++) {

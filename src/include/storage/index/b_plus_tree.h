@@ -53,7 +53,29 @@ class Context {
   // You may want to use this when getting value, but not necessary.
   std::deque<ReadPageGuard> read_set_;
 
+  std::deque<WritePageGuard> write_sibling_set_;
+
   auto IsRootPage(page_id_t page_id) -> bool { return page_id == root_page_id_; }
+
+  void Print() {
+    std::cout << "read_set_:" << read_set_.size() << "write_set_" << write_set_.size() << "sibiling_set_"
+              << write_sibling_set_.size() << '\n';
+    // std::cout << "page ids of read_set_:";
+    // for (unsigned long i = 0; i < read_set_.size(); i++) {
+    //   std::cout << read_set_[i].PageId() << ' ';
+    // }
+    // std::cout << '\n';
+    // std::cout << "page ids of write_set_:";
+    // for (unsigned long i = 0; i < write_set_.size();i++){
+    //   std::cout << write_set_[i].PageId() << ' ';
+    // }
+    // std::cout << '\n';
+    // std::cout << "page ids of write_sibiling_set_:";
+    // for (unsigned long i = 0; i < write_sibling_set_.size();i++){
+    //   std::cout << write_sibling_set_[i].PageId() << ' ';
+    // }
+    // std::cout << '\n';
+  }
 };
 
 #define BPLUSTREE_TYPE BPlusTree<KeyType, ValueType, KeyComparator>
@@ -75,11 +97,24 @@ class BPlusTree {
 
   auto BinarySearch(const KeyType &key, const LeafPage *leaf_page) -> int;
 
-  void SplitLeaf(page_id_t leaf_page_id, MappingType insert_value, page_id_t &right_page_id_t, KeyType &new_key);
+  void SplitLeaf(MappingType insert_value, page_id_t &right_page_id_t, KeyType &new_key, Context &ctx);
 
-  void SplitInternal(page_id_t internal_page_id, page_id_t &right_page_id, KeyType &new_key);
+  void SplitInternal(page_id_t &right_page_id, KeyType &new_key, Context &ctx);
 
-  void InsertIntoInternal(KeyType key, page_id_t internal_page_id, page_id_t left_page_id, page_id_t right_page_id);
+  void InsertIntoInternal(KeyType key, page_id_t left_page_id, page_id_t right_page_id, Context &ctx);
+
+  auto RemoveFromLeaf(const KeyType &key, int &key_idx, Context &ctx) -> bool;
+
+  void RemoveFromInternal(const int &removed_idx, Context &ctx);
+  // Merge the right one into the left one
+  void MergeLeafNode(LeafPage *page1, LeafPage *page2, page_id_t left_page_id, page_id_t right_page_id);
+
+  void MergeInternalNode(InternalPage *left_page, InternalPage *right_page, const KeyType &parent_key,
+                         page_id_t left_page_id, page_id_t right_page_id);
+
+  void RemoveParentReadLock(Context &ctx, page_id_t pos_page_id);
+
+  void RemoveParentWriteLock(Context &ctx, page_id_t pos_page_id);
   // Returns true if this B+ tree has no keys and values.
   auto IsEmpty() const -> bool;
 

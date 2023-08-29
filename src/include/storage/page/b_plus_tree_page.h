@@ -62,7 +62,7 @@ class BPlusTreePage {
  private:
   // member variable, attributes that both internal and leaf page share
   IndexPageType page_type_;
-  int size_;    // for the internal page, the first slot is counted.
+  int size_;  // for the internal page, the first slot is counted.
   int max_size_;
   page_id_t parent_page_id_;
 };

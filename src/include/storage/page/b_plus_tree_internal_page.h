@@ -18,7 +18,7 @@
 namespace bustub {
 
 #define B_PLUS_TREE_INTERNAL_PAGE_TYPE BPlusTreeInternalPage<KeyType, ValueType, KeyComparator>
-#define INTERNAL_PAGE_HEADER_SIZE 12
+#define INTERNAL_PAGE_HEADER_SIZE 16
 #define INTERNAL_PAGE_SIZE ((BUSTUB_PAGE_SIZE - INTERNAL_PAGE_HEADER_SIZE) / (sizeof(MappingType)))
 /**
  * Store n indexed keys and n+1 child pointers (page_id) within internal page.
@@ -45,7 +45,7 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    * the creation of a new page to make a valid BPlusTreeInternalPage
    * @param max_size Maximal size of the page
    */
-  void Init(int max_size = INTERNAL_PAGE_SIZE);
+  void Init(int max_size = INTERNAL_PAGE_SIZE - 1);
 
   /**
    * @param index The index of the key to get. Index must be non-zero.

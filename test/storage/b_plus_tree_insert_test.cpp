@@ -86,8 +86,9 @@ TEST(BPlusTreeTests, InsertTest2) {
     index_key.SetFromInteger(key);
     std::cout << key << "ci charu" << std::endl;
     tree.Insert(index_key, rid, transaction);
+    std::cout << tree.DrawBPlusTree();
   }
-  tree.DrawBPlusTree();
+  std::cout << tree.DrawBPlusTree();
   std::vector<RID> rids;
   for (auto key : keys) {
     rids.clear();
@@ -121,7 +122,7 @@ TEST(BPlusTreeTests, InsertTest2) {
   delete bpm;
 }
 
-TEST(BPlusTreeTests, DISABLED_InsertTest3) {
+TEST(BPlusTreeTests, InsertTest3) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
