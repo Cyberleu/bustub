@@ -111,7 +111,6 @@ auto TableHeap::MakeIterator() -> TableIterator {
   std::unique_lock<std::mutex> guard(latch_);
   auto last_page_id = last_page_id_;
   guard.unlock();
-
   auto page_guard = bpm_->FetchPageRead(last_page_id);
   auto page = page_guard.As<TablePage>();
   return {this, {first_page_id_, 0}, {last_page_id, page->GetNumTuples()}};

@@ -659,20 +659,25 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+  std::cout << "i'm here1" << '\n';
   page_id_t root_page_id = GetRootPageId();
+  std::cout << root_page_id << '\n';
   page_id_t pos_page_id = root_page_id;
   page_id_t leaf_page_id = INVALID_PAGE_ID;
   while (true) {  // Find the leafnode first
+    if (pos_page_id == INVALID_PAGE_ID) {
+      break;
+    }
     ReadPageGuard read_guard = bpm_->FetchPageRead(pos_page_id);
     const auto page = read_guard.As<BPlusTreePage>();
     if (page->IsLeafPage()) {
       leaf_page_id = read_guard.PageId();
-      break;
+      return INDEXITERATOR_TYPE(leaf_page_id, 0, bpm_);
     }
     const auto internal_page = read_guard.As<InternalPage>();
     pos_page_id = internal_page->ValueAt(0);
   }
-  return INDEXITERATOR_TYPE(leaf_page_id, 0, bpm_, comparator_);
+  return INDEXITERATOR_TYPE(-1, 0, nullptr);
 }
 
 /*
@@ -705,7 +710,7 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
   ReadPageGuard read_guard = bpm_->FetchPageRead(leaf_page_id);
   const auto leaf_page = read_guard.As<LeafPage>();
   int key_index = BinarySearch(key, leaf_page);
-  return INDEXITERATOR_TYPE(leaf_page_id, key_index, bpm_, comparator_);
+  return INDEXITERATOR_TYPE(leaf_page_id, key_index, bpm_);
 }
 
 /*
@@ -720,17 +725,20 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
   page_id_t leaf_page_id = INVALID_PAGE_ID;
   int leaf_size = -1;
   while (true) {  // Find the leafnode first
+    if (root_page_id == INVALID_PAGE_ID) {
+      break;
+    }
     ReadPageGuard read_guard = bpm_->FetchPageRead(pos_page_id);
     const auto page = read_guard.As<BPlusTreePage>();
     if (page->IsLeafPage()) {
       leaf_page_id = read_guard.PageId();
       leaf_size = page->GetSize();
-      break;
+      return INDEXITERATOR_TYPE(leaf_page_id, leaf_size, bpm_);
     }
     const auto internal_page = read_guard.As<InternalPage>();
     pos_page_id = internal_page->ValueAt(internal_page->GetSize() - 1);
   }
-  return INDEXITERATOR_TYPE(leaf_page_id, leaf_size, bpm_, comparator_);
+  return INDEXITERATOR_TYPE(-1, 0, nullptr);
 }
 
 /**

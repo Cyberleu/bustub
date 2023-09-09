@@ -43,6 +43,10 @@ class IndexScanExecutor : public AbstractExecutor {
 
  private:
   /** The index scan plan node to be executed. */
+  TableInfo *table_info_;
+  IndexInfo *index_info_;
+  BPlusTreeIndexIteratorForTwoIntegerColumn iter_{-1, -1, nullptr};
+  BPlusTreeIndexForTwoIntegerColumn *tree_;
   const IndexScanPlanNode *plan_;
 };
 }  // namespace bustub

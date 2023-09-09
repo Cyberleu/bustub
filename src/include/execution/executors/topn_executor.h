@@ -12,7 +12,10 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <queue>
+#include <stack>
 #include <utility>
 #include <vector>
 
@@ -63,5 +66,8 @@ class TopNExecutor : public AbstractExecutor {
   const TopNPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  std::vector<Tuple> heap_;
+  std::stack<Tuple> tuples_;
 };
 }  // namespace bustub

@@ -140,7 +140,7 @@ class HashTableBucketPage {
 
   void PrintBucketBinary(uint32_t group) {
     char data_char = readable_[group];
-    uint8_t data_int = static_cast<uint8_t>(data_char);
+    auto data_int = static_cast<uint8_t>(data_char);
     for (int offset = 0; offset < 8; offset++) {
       uint8_t mask = 1 << (7 - offset);
       std::cout << ((mask & data_int) > 0);

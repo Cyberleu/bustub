@@ -23,7 +23,8 @@ INDEX_TEMPLATE_ARGUMENTS
 class IndexIterator {
  public:
   // you may define your own constructor based on your member variables
-  IndexIterator(page_id_t leaf_page_id, int index, BufferPoolManager *bpm, const KeyComparator &comparator);
+  // IndexIterator(page_id_t leaf_page_id, int index, BufferPoolManager *bpm, const KeyComparator &comparator);
+  IndexIterator(page_id_t leaf_page_id, int index, BufferPoolManager *bpm);
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;
@@ -43,10 +44,8 @@ class IndexIterator {
  private:
   // add your own private member variables here
   page_id_t leaf_page_id_;
-  ReadPageGuard read_guard_;
   const B_PLUS_TREE_LEAF_PAGE_TYPE *leaf_page_{nullptr};
   BufferPoolManager *bpm_;
-  KeyComparator comparator_;
   int index_{0};
   MappingType pair_;
 };

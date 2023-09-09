@@ -12,12 +12,11 @@ namespace bustub {
  * set your own input parameters
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE::IndexIterator(page_id_t leaf_page_id, int index, BufferPoolManager *bpm,
-                                  const KeyComparator &comparator)
-    : leaf_page_id_(leaf_page_id), bpm_(bpm), comparator_(std::move(comparator)), index_(index) {
+INDEXITERATOR_TYPE::IndexIterator(page_id_t leaf_page_id, int index, BufferPoolManager *bpm)
+    : leaf_page_id_(leaf_page_id), bpm_(bpm), index_(index) {
   if (leaf_page_id_ != INVALID_PAGE_ID) {
-    read_guard_ = bpm_->FetchPageRead(leaf_page_id);
-    leaf_page_ = read_guard_.As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
+    ReadPageGuard read_guard = bpm_->FetchPageRead(leaf_page_id);
+    leaf_page_ = read_guard.As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
     pair_ = MappingType(leaf_page_->KeyAt(index_), leaf_page_->ValueAt(index_));
   }
 }
@@ -42,8 +41,8 @@ auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
   if (index_ == leaf_page_->GetSize() && leaf_page_->GetNextPageId() != INVALID_PAGE_ID) {
     // The last key-value pair of this leaf page.
     leaf_page_id_ = leaf_page_->GetNextPageId();
-    read_guard_ = bpm_->FetchPageRead(leaf_page_id_);
-    leaf_page_ = read_guard_.As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
+    ReadPageGuard read_guard = bpm_->FetchPageRead(leaf_page_id_);
+    leaf_page_ = read_guard.As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
     index_ = 0;
   }
   pair_ = MappingType(leaf_page_->KeyAt(index_), leaf_page_->ValueAt(index_));

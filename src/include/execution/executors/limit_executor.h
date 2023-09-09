@@ -51,6 +51,7 @@ class LimitExecutor : public AbstractExecutor {
  private:
   /** The limit plan node to be executed */
   const LimitPlanNode *plan_;
+  std::size_t count_{0};
 
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
